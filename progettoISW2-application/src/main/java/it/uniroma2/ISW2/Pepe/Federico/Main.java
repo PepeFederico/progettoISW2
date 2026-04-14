@@ -1,13 +1,15 @@
 package it.uniroma2.ISW2.Pepe.Federico;
 
-import it.uniroma2.ISW2.Pepe.Federico.utils.CSVExporter;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import java.io.IOException;
 import java.util.List;
 
 public class Main {
 
-    public static void main(String[] args) throws IOException {
-        String projectName = "STORM";
+    public static void main(String[] args) throws IOException, GitAPIException {
+        String projectName  = "STORM";
+        String githubURL    = "https://github.com/PepeFederico/storm.git";
+        String localPath    = "repo-storm";
 
         JiraReleaseRetriever retriever = new JiraReleaseRetriever();
 
@@ -15,32 +17,25 @@ public class Main {
         List<ProjectVersion> allVersions = retriever.getReleaseInfo(projectName);
 
         int totalVersions = allVersions.size();
-        int versionsToKeep = (int) Math.ceil(totalVersions * 0.35);
+        int versionsToKeep = (int) Math.ceil(totalVersions * 0.34);
 
+        List<ProjectVersion> filteredReleases = allVersions.subList(0, versionsToKeep);
         System.out.println("Versioni trovate: " + allVersions.size());
-        System.out.println("Release da tenere: " + versionsToKeep);
+        System.out.println("Release da analizzare: " + filteredReleases.size());
 
-        String header = "Index, VersionID, VersionName, Date";
-        String fileName = projectName + "VersionInfo.csv";
+        GitHandler gitHandler = new GitHandler(localPath, githubURL);
 
-        CSVExporter.writeToCSV(
-                fileName,
-                header,
-                allVersions,
-                v -> {
-                    int currentIndex = allVersions.indexOf(v) + 1;
-                    String name = v.VersionName();
-                    if (name.contains(",")) {
-                        name = "\"" + name + "\"";
-                    }
+        for (ProjectVersion release : filteredReleases){
+            System.out.println("    >> Elaborazione Release " + release.VersionName() + " --- ");
+            gitHandler.checkoutToRelease(release);
 
-                    return String.format("%d,%s,%s,%s",
-                            currentIndex,     // Va in Index
-                            v.VersionID(),    // Va in Version ID
-                            name,             // Va in Version Name
-                            v.Date().toString() // Va in Date (produce YYYY-MM-DDT00:00)
-                    );
-                }
-        );
+            // [PROSSIMO STEP DA IMPLEMENTARE]
+            // L'analyzer leggerà i file nella cartella 'localPath'
+            // analyzeVersion(localPath, release);
+
+            System.out.println("    >> Checkout completato !");
+        }
+
+
     }
 }

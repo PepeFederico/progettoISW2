@@ -19,6 +19,9 @@ out/
 # Log
 *.log
 
+# Cartella repo-locale
+repo-storm/
+
 # Sistema
 .DS_Store
 Thumbs.db
