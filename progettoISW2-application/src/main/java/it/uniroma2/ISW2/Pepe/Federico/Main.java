@@ -2,19 +2,23 @@ package it.uniroma2.ISW2.Pepe.Federico;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Properties;
 
 public class Main {
 
     public static void main(String[] args) throws IOException, GitAPIException {
-        String projectName  = "STORM";
-        String githubURL    = "https://github.com/PepeFederico/storm.git";
-        String localPath    = "repo-storm";
+        Properties properties           = new Properties();
+        JiraReleaseRetriever retriever  = new JiraReleaseRetriever();
+        AnalyzerVersion analyzerVersion = new AnalyzerVersion();
 
-        JiraReleaseRetriever retriever = new JiraReleaseRetriever();
+        try(InputStream input = Main.class.getClassLoader().getResourceAsStream("config.properties")){
+            properties.load(input);
+        }
 
-        System.out.println("Recupero informazioni sulle release per: " + projectName);
-        List<ProjectVersion> allVersions = retriever.getReleaseInfo(projectName);
+        System.out.println("Recupero informazioni sulle release per: " + properties.getProperty("projectName"));
+        List<ProjectVersion> allVersions = retriever.getReleaseInfo(properties.getProperty("projectName"));
 
         int totalVersions = allVersions.size();
         int versionsToKeep = (int) Math.ceil(totalVersions * 0.34);
@@ -23,17 +27,16 @@ public class Main {
         System.out.println("Versioni trovate: " + allVersions.size());
         System.out.println("Release da analizzare: " + filteredReleases.size());
 
-        GitHandler gitHandler = new GitHandler(localPath, githubURL);
+        GitHandler gitHandler = new GitHandler(properties.getProperty("localPath"), properties.getProperty("githubURL"));
 
         for (ProjectVersion release : filteredReleases){
-            System.out.println("    >> Elaborazione Release " + release.VersionName() + " --- ");
+            System.out.println("    >> Elaborazione Release " + release.versionName() + " --- ");
+
             gitHandler.checkoutToRelease(release);
-
-            // [PROSSIMO STEP DA IMPLEMENTARE]
-            // L'analyzer leggerà i file nella cartella 'localPath'
-            // analyzeVersion(localPath, release);
-
             System.out.println("    >> Checkout completato !");
+            analyzerVersion.analyzeVersion(properties.getProperty("localPath"), release);
+
+            break;
         }
 
 

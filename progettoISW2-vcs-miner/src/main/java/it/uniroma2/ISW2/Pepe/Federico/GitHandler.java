@@ -7,6 +7,8 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.StreamSupport;
@@ -14,6 +16,7 @@ import java.util.stream.StreamSupport;
 public class GitHandler {
     private final Git git;
     private final File localPath;
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
     public GitHandler(String localPath, String githubUrl) throws GitAPIException, IOException {
         this.localPath = new File(localPath);
@@ -29,8 +32,7 @@ public class GitHandler {
     }
 
     public void checkoutToRelease(ProjectVersion version) throws IOException, GitAPIException {
-        long releaseTimestamp = version.Date().toEpochSecond(ZoneOffset.UTC);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+        long releaseTimestamp = version.date().toEpochSecond(ZoneOffset.UTC);
 
         Iterable<RevCommit> commits = git.log().all().call();
         RevCommit targetCommit = StreamSupport.stream(commits.spliterator(), false)
@@ -38,10 +40,15 @@ public class GitHandler {
                         commit.getCommitTime() <= releaseTimestamp
                 )
                 .findFirst()
-                .orElseThrow(() -> new IOException("Nessun commit trovato per la data: " + version.Date()));
+                .orElseThrow(() -> new IOException("Nessun commit trovato per la data: " + version.date()));
 
-        System.out.println("    >> Release: " + version.VersionName() + " | Data: " + version.Date().format(formatter));
-        System.out.println("    >> Commit individuato: " + targetCommit.getName() + " del " + targetCommit.getCommitTime());
+        LocalDateTime commitDate = LocalDateTime.ofInstant(Instant.ofEpochSecond(
+                targetCommit.getCommitTime()),
+                ZoneOffset.UTC
+        );
+
+        System.out.println("    >> Release: " + version.versionName() + " | Data: " + version.date().format(FORMATTER));
+        System.out.println("    >> Commit individuato: " + targetCommit.getName().substring(0, 10) + " del " + commitDate.format(FORMATTER));
 
         git.checkout()
                 .setName(targetCommit.getName())

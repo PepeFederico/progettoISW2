@@ -31,9 +31,20 @@ public class JiraReleaseRetriever {
         }
 
         List<ProjectVersion> allVersions = new ArrayList<>(versionMap.values());
-        allVersions.sort(Comparator.comparing(ProjectVersion::Date));
+        allVersions.sort(Comparator.comparing(ProjectVersion::date));
 
-        return allVersions;
+        List<ProjectVersion> IndexedVersions = new ArrayList<>();
+
+        int counter = 1;
+        for (ProjectVersion temp : allVersions) {
+            IndexedVersions.add(new ProjectVersion(
+                    counter++,              //  index Release
+                    temp.versionID(),       //  versionID release
+                    temp.versionName(),     //  versionName release
+                    temp.date()             //  date release
+            ));
+        }
+        return IndexedVersions;
     }
 
     public static JSONObject readJsonFromUrl(String url) throws IOException, JSONException {
