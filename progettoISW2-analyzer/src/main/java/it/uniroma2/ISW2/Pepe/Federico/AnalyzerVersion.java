@@ -18,7 +18,7 @@ public class AnalyzerVersion {
         System.out.println("        >> Trovati " + javaFiles.size() + " file .java");
 
         for (File f : javaFiles){
-            analyzeJavaClass.computeMetrics(f);
+            analyzeJavaClass.computeMetricsCK(f);
         }
 
         System.out.println("    >> Analisi della release " + release.versionName() + " completata!");

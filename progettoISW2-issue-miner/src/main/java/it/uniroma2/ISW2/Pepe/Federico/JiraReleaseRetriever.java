@@ -13,7 +13,7 @@ import java.util.*;
 public class JiraReleaseRetriever {
 
     public List<ProjectVersion> getReleaseInfo(String projName) throws IOException {
-        Map<LocalDateTime, ProjectVersion> versionMap = new HashMap<>();
+        List<ProjectVersion> allVersions = new ArrayList<>();
         String url = "https://issues.apache.org/jira/rest/api/2/project/" + projName;
 
         JSONObject json = readJsonFromUrl(url);
@@ -21,16 +21,15 @@ public class JiraReleaseRetriever {
 
         for (int i = 0; i < versions.length(); i++) {
             JSONObject v = versions.getJSONObject(i);
-            if (v.has("releaseDate")) {
+            if (v.has("released") && v.has("releaseDate")) {
                 LocalDateTime date = LocalDate.parse(v.getString("releaseDate")).atStartOfDay();
                 String id = v.getString("id");
                 String name = v.getString("name");
 
-                versionMap.put(date, new ProjectVersion(0, id, name, date));
+                allVersions.add(new ProjectVersion(0, id, name, date));
             }
         }
 
-        List<ProjectVersion> allVersions = new ArrayList<>(versionMap.values());
         allVersions.sort(Comparator.comparing(ProjectVersion::date));
 
         List<ProjectVersion> IndexedVersions = new ArrayList<>();

@@ -5,40 +5,78 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Main {
 
-    public static void main(String[] args) throws IOException, GitAPIException {
-        Properties properties           = new Properties();
-        JiraReleaseRetriever retriever  = new JiraReleaseRetriever();
-        AnalyzerVersion analyzerVersion = new AnalyzerVersion();
+    private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
-        try(InputStream input = Main.class.getClassLoader().getResourceAsStream("config.properties")){
-            properties.load(input);
+    public static void main(String[] args) {
+        try {
+            new Main().run();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Fallimento critico durante l'esecuzione dell'applicazione", e);
+            System.exit(1);
+        }
+    }
+
+    public void run() throws IOException, GitAPIException {
+        // 1    --> Caricamento e validazione configurazione
+        Properties props = loadConfiguration();
+        String projectName = props.getProperty("projectName");
+        String localPath = props.getProperty("localPath");
+        String githubUrl = props.getProperty("githubURL");
+
+        JiraReleaseRetriever retriever = new JiraReleaseRetriever();
+        AnalyzerVersion analyzer = new AnalyzerVersion();
+
+        // 2    -->  Recupero e filtraggio release
+        LOGGER.info("Inizio recupero informazioni sulle release per il progetto: " + projectName);
+        List<ProjectVersion> allVersions = retriever.getReleaseInfo(projectName);
+
+        if (allVersions.isEmpty()) {
+            LOGGER.warning("Nessuna versione trovata per il progetto " + projectName);
+            return;
         }
 
-        System.out.println("Recupero informazioni sulle release per: " + properties.getProperty("projectName"));
-        List<ProjectVersion> allVersions = retriever.getReleaseInfo(properties.getProperty("projectName"));
+        List<ProjectVersion> filteredReleases = filterReleases(allVersions);
+        System.out.println("Versioni totali: " + allVersions.size());
+        System.out.println("Release da analizzare (34%): " + filteredReleases.size());
 
-        int totalVersions = allVersions.size();
-        int versionsToKeep = (int) Math.ceil(totalVersions * 0.34);
-
-        List<ProjectVersion> filteredReleases = allVersions.subList(0, versionsToKeep);
-        System.out.println("Versioni trovate: " + allVersions.size());
-        System.out.println("Release da analizzare: " + filteredReleases.size());
-
-        GitHandler gitHandler = new GitHandler(properties.getProperty("localPath"), properties.getProperty("githubURL"));
-
-        for (ProjectVersion release : filteredReleases){
-            System.out.println("    >> Elaborazione Release " + release.versionName() + " --- ");
-
-            gitHandler.checkoutToRelease(release);
-            System.out.println("    >> Checkout completato !");
-            analyzerVersion.analyzeVersion(properties.getProperty("localPath"), release);
-
-            break;
+        // 3    --> Elaborazione release
+        try (GitHandler gitHandler = new GitHandler(localPath, githubUrl)) {
+            for (ProjectVersion release : filteredReleases) {
+                processRelease(release, gitHandler, analyzer, localPath);
+            }
         }
+        LOGGER.info("Processo completato con successo per tutte le release filtrate.");
+    }
 
+    private void processRelease(ProjectVersion release, GitHandler git, AnalyzerVersion analyzer, String path)
+            throws GitAPIException, IOException {
 
+        LOGGER.log(Level.INFO, ">> Elaborazione Release: ", release.versionName());
+
+        git.checkoutToRelease(release);
+        analyzer.analyzeVersion(path, release);
+
+        LOGGER.log(Level.INFO, ">> Analisi completata per la versione: ", release.versionName());
+    }
+
+    private List<ProjectVersion> filterReleases(List<ProjectVersion> versions) {
+        int versionsToKeep = (int) Math.ceil(versions.size() * 0.34);
+        return versions.subList(0, Math.min(versionsToKeep, versions.size()));
+    }
+
+    private Properties loadConfiguration() throws IOException {
+        Properties props = new Properties();
+        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
+            if (input == null) {
+                throw new IOException("Impossibile trovare il file di configurazione: config.properties");
+            }
+            props.load(input);
+        }
+        return props;
     }
 }
