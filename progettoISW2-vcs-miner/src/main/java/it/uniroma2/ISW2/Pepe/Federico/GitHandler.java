@@ -35,14 +35,17 @@ public class GitHandler implements AutoCloseable {
         }
     }
 
-    public void checkoutToRelease(ProjectVersion version) throws IOException, GitAPIException {
+    public String checkoutToRelease(ProjectVersion version) throws IOException, GitAPIException {
         String versionName = version.versionName().trim();
+        String commitId;
 
         fetchAllTags();
 
         // Cerchiamo il commit: prima via Tag, poi via Data
         String commitHash = findHashByTag(versionName).orElseGet(() -> findHashByDate(version));
-        executeCheckout(commitHash);
+        commitId = executeCheckout(commitHash);
+
+        return commitId;
     }
 
     private void fetchAllTags() throws GitAPIException {
@@ -110,12 +113,14 @@ public class GitHandler implements AutoCloseable {
         return Optional.empty();
     }
 
-    private void executeCheckout(String hash) throws GitAPIException {
+    private String executeCheckout(String hash) throws GitAPIException {
         git.checkout()
                 .setName(hash)
                 .setForced(true)
                 .call();
         log("Checkout completato su: " + formatHash(hash));
+
+        return hash;
     }
 
     private void log(String message) {
@@ -123,7 +128,8 @@ public class GitHandler implements AutoCloseable {
     }
 
     private String formatHash(String hash) {
-        return hash != null && hash.length() > 10 ? hash.substring(0, 10) : hash;
+        if (hash != null && !hash.isEmpty()) return hash;
+        return null;
     }
 
     @Override

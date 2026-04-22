@@ -23,10 +23,11 @@ public class Main {
 
     public void run() throws IOException, GitAPIException {
         // 1    --> Caricamento e validazione configurazione
-        Properties props = loadConfiguration();
-        String projectName = props.getProperty("projectName");
-        String localPath = props.getProperty("localPath");
-        String githubUrl = props.getProperty("githubURL");
+        Properties props    = loadConfiguration();
+        String projectName  = props.getProperty("projectName");
+        String localPath    = props.getProperty("localPath");
+        String githubUrl    = props.getProperty("githubURL");
+        String root         = props.getProperty("root");
 
         JiraReleaseRetriever retriever = new JiraReleaseRetriever();
         AnalyzerVersion analyzer = new AnalyzerVersion();
@@ -47,19 +48,19 @@ public class Main {
         // 3    --> Elaborazione release
         try (GitHandler gitHandler = new GitHandler(localPath, githubUrl)) {
             for (ProjectVersion release : filteredReleases) {
-                processRelease(release, gitHandler, analyzer, localPath);
+                processRelease(release, gitHandler, analyzer, localPath, root);
             }
         }
         LOGGER.info("Processo completato con successo per tutte le release filtrate.");
     }
 
-    private void processRelease(ProjectVersion release, GitHandler git, AnalyzerVersion analyzer, String path)
-            throws GitAPIException, IOException {
+    private void processRelease(ProjectVersion release, GitHandler git, AnalyzerVersion analyzer, String path, String root) throws GitAPIException, IOException {
+        String commitId;
 
         LOGGER.log(Level.INFO, ">> Elaborazione Release: ", release.versionName());
 
-        git.checkoutToRelease(release);
-        analyzer.analyzeVersion(path, release);
+        commitId = git.checkoutToRelease(release);
+        analyzer.analyzeVersion(path, release, commitId, root);
 
         LOGGER.log(Level.INFO, ">> Analisi completata per la versione: ", release.versionName());
     }

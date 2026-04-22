@@ -1,15 +1,21 @@
 package it.uniroma2.ISW2.Pepe.Federico;
 
+import it.uniroma2.ISW2.Pepe.Federico.metrics.AnalyzeMetricsCK;
+import it.uniroma2.ISW2.Pepe.Federico.metrics.MetricsCollector;
+
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 public class AnalyzerVersion {
 
-    public void analyzeVersion(String absolutePath, ProjectVersion release){
-        System.out.println("    >> Analisi della Release: " + release.versionName());
+    public void analyzeVersion(String absolutePath, ProjectVersion release, String commitId, String root){
+        System.out.println("    >> Analisi della Release: " + release.versionName() + " --> Riferita al seguente Commit: " + commitId);
 
-        AnalyzeJavaClass analyzeJavaClass = new AnalyzeJavaClass();
+        MetricsCollector metricsCollector = new MetricsCollector();
+        AnalyzeMetricsCK analyzeMetricsCK = new AnalyzeMetricsCK();
         File rootFolder = new File(absolutePath);
         List<File> javaFiles = new ArrayList<>();
 
@@ -17,8 +23,14 @@ public class AnalyzerVersion {
 
         System.out.println("        >> Trovati " + javaFiles.size() + " file .java");
 
+        // Inserimento campi nella MetricsCollector
+        metricsCollector.setNumRelease(release.index());
+        metricsCollector.setVersionName(release.versionName());
+        metricsCollector.setCommitId(commitId);
+
         for (File f : javaFiles){
-            analyzeJavaClass.computeMetricsCK(f);
+            prepareFileForAnalysis(f, metricsCollector, root);
+            analyzeMetricsCK.computeMetricsCK(f, metricsCollector);
         }
 
         System.out.println("    >> Analisi della release " + release.versionName() + " completata!");
@@ -51,6 +63,23 @@ public class AnalyzerVersion {
             }
 
         }
+    }
+
+    private void prepareFileForAnalysis(File javaFile, MetricsCollector collector, String root) {
+        // 1    Rendiamo la root un percorso assoluto e normalizzato
+        Path rootPath = Paths.get(root).toAbsolutePath().normalize();
+
+        // 2    Rendiamo il percorso del file assoluto e normalizzato
+        Path filePath = javaFile.toPath().toAbsolutePath().normalize();
+
+        // 3    Calcoliamo il percorso relativo (taglio la parte della root)
+        String relativePath = rootPath.relativize(filePath).toString();
+
+        // 4    Uniformiamo i separatori per Git
+        relativePath = relativePath.replace("\\", "/");
+
+        // 5    Salviamo nel collector
+        collector.setClassPath(relativePath);
     }
 
 }
