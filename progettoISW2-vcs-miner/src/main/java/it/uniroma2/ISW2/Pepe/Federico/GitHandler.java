@@ -48,6 +48,18 @@ public class GitHandler implements AutoCloseable {
         return commitId;
     }
 
+    public Repository getRepository(){
+        return git.getRepository();
+    }
+
+    public Iterable<RevCommit> getCommitsInRange(String previousCommit, String currentCommit) throws IOException, GitAPIException {
+        ObjectId currId = git.getRepository().resolve(currentCommit);
+        ObjectId prevId = git.getRepository().resolve(previousCommit);
+
+        // addRange(since, until) -> da prev a curr
+        return git.log().addRange(prevId, currId).call();
+    }
+
     private void fetchAllTags() throws GitAPIException {
         log("Aggiornamento Tag dal repository remoto...");
         git.fetch().setTagOpt(TagOpt.FETCH_TAGS).call();

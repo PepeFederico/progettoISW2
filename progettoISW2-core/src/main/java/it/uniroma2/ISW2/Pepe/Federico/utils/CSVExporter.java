@@ -17,7 +17,7 @@ public class CSVExporter {
         try{
             if(Files.notExists(pathDir)) Files.createDirectories(pathDir);
 
-            String fullPath = "output" + File.separator + fileName;
+            File fullPath = pathDir.resolve(fileName).toFile();
 
             try(BufferedWriter writer = new BufferedWriter(new FileWriter(fullPath))){
                 writer.write(header);

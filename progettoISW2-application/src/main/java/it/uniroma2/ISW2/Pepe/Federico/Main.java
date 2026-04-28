@@ -1,10 +1,11 @@
 package it.uniroma2.ISW2.Pepe.Federico;
 
+import it.uniroma2.ISW2.Pepe.Federico.metrics.DatasetExporter;
+import it.uniroma2.ISW2.Pepe.Federico.metrics.MetricsCollector;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,8 +30,8 @@ public class Main {
         String githubUrl    = props.getProperty("githubURL");
         String root         = props.getProperty("root");
 
-        JiraReleaseRetriever retriever = new JiraReleaseRetriever();
-        AnalyzerVersion analyzer = new AnalyzerVersion();
+        JiraReleaseRetriever retriever                      = new JiraReleaseRetriever();
+        AnalyzerVersion analyzer;
 
         // 2    -->  Recupero e filtraggio release
         LOGGER.info("Inizio recupero informazioni sulle release per il progetto: " + projectName);
@@ -47,22 +48,41 @@ public class Main {
 
         // 3    --> Elaborazione release
         try (GitHandler gitHandler = new GitHandler(localPath, githubUrl)) {
+
+            analyzer = new AnalyzerVersion(gitHandler);
+            List<MetricsCollector> finalDataset = new ArrayList<>();
+
             for (ProjectVersion release : filteredReleases) {
-                processRelease(release, gitHandler, analyzer, localPath, root);
+
+                Map<String, MetricsCollector> currentReleaseMap = processRelease(release, gitHandler, analyzer, localPath, root);
+                finalDataset.addAll(currentReleaseMap.values());
+                LOGGER.info("Release " + release.versionName() + " analizzata: " + currentReleaseMap.size() + " classi.");
+            }
+
+            // Esportazione Dataset
+            if (!finalDataset.isEmpty()){
+                LOGGER.info("Inizio esportazione dataaset sul file CSV...");
+                DatasetExporter datasetExporter = new DatasetExporter();
+                datasetExporter.generateDataset(projectName, finalDataset);
+            } else {
+                LOGGER.warning("Nessun dato raccolto: il file CSV non verrà generato.");
             }
         }
         LOGGER.info("Processo completato con successo per tutte le release filtrate.");
     }
 
-    private void processRelease(ProjectVersion release, GitHandler git, AnalyzerVersion analyzer, String path, String root) throws GitAPIException, IOException {
+    private Map<String, MetricsCollector> processRelease(ProjectVersion release, GitHandler git, AnalyzerVersion analyzer, String path, String root) throws GitAPIException, IOException {
         String commitId;
+        Map<String, MetricsCollector> metrics;
 
         LOGGER.log(Level.INFO, ">> Elaborazione Release: ", release.versionName());
 
         commitId = git.checkoutToRelease(release);
-        analyzer.analyzeVersion(path, release, commitId, root);
+        metrics = analyzer.analyzeVersion(path, release, commitId, root);
 
         LOGGER.log(Level.INFO, ">> Analisi completata per la versione: ", release.versionName());
+
+        return metrics;
     }
 
     private List<ProjectVersion> filterReleases(List<ProjectVersion> versions) {
