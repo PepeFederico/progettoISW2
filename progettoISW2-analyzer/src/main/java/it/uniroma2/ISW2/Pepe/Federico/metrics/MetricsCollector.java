@@ -2,9 +2,9 @@ package it.uniroma2.ISW2.Pepe.Federico.metrics;
 
 public class MetricsCollector {
     // --- Metadati (Indispensabili per il dataset) ---
-    private final int numRelease;         // Il VersionID numerico
-    private final String versionName;     // Il nome della versione (es. "1.1.0")
-    private final String commitId;        // Il CommitID specifico
+    private int numRelease;         // Il VersionID numerico
+    private String versionName;     // Il nome della versione (es. "1.1.0")
+    private String commitId;        // Il CommitID specifico
 
     private String classPath;       // Identificativo della classe (Modulo/Src/...)
 
@@ -21,19 +21,22 @@ public class MetricsCollector {
     // --- Metriche Bansiy & Davis (QMOOD) ---
     private long npm;               // Metodi pubblici
     private float dam;              // Incapsulamento (Rapporto 0-1)
-    private int moa = 0;                // Aggregazione
     private float mfa;              // Astrazione (Rapporto 0-1)
-    private float cam = 0;              // Coesione (Rapporto 0-1)
     private float amc;              // Complessità media
 
     // --- Metriche relative alla Churm ---
     private int nRevisions;
     private int locAdded;
     private int locDeleted;
-    private float maxChurm;
-    private float avgChurm;
+    private float maxChurn;
+    private float avgChurn;
+    private int totalChurn;
+    private int nAuthor;
+    private float m1;       //Churned LOC / Total LOC
+    private float m2;       //Deleted LOC / Total LOC
 
     private int nSmells;
+    private boolean buggy;
 
     public MetricsCollector(int numRelease, String versionName, String commitId) {
         this.numRelease = numRelease;
@@ -44,9 +47,18 @@ public class MetricsCollector {
         this.nRevisions     = 0;
         this.locAdded       = 0;
         this.locDeleted     = 0;
-        this.maxChurm       = 0;
-        this.avgChurm       = 0;
+        this.maxChurn       = 0;
+        this.avgChurn       = 0;
+        this.totalChurn     = 0;
+        this.nAuthor        = 0;
+        this.m1             = 0;
+        this.m2             = 0;
+
+        //Settiamo la Buggyness a False
+        this.buggy          = false;
     }
+
+    public MetricsCollector(){}
 
     public int getNumRelease() {
         return numRelease;
@@ -56,6 +68,15 @@ public class MetricsCollector {
     }
     public String getCommitId() {
         return commitId;
+    }
+    public void setNumRelease(int numRelease) {
+        this.numRelease = numRelease;
+    }
+    public void setVersionName(String versionName) {
+        this.versionName = versionName;
+    }
+    public void setCommitId(String commitId) {
+        this.commitId = commitId;
     }
 
     public String getClassPath() {
@@ -135,19 +156,11 @@ public class MetricsCollector {
         this.dam = dam;
     }
 
-    public int getMoa() {
-        return moa;
-    }
-
     public float getMfa() {
         return mfa;
     }
     public void setMfa(float mfa) {
         this.mfa = mfa;
-    }
-
-    public float getCam() {
-        return cam;
     }
 
     public float getAmc() {
@@ -185,18 +198,52 @@ public class MetricsCollector {
         this.locDeleted = lodDeleted;
     }
 
-    public float getMaxChurm() {
-        return maxChurm;
+    public float getMaxChurn() {
+        return maxChurn;
     }
-    public void setMaxChurm(float maxChurm) {
-        this.maxChurm = maxChurm;
-    }
-
-    public float getAvgChurm() {
-        return avgChurm;
-    }
-    public void setAvgChurm(float avgChurm) {
-        this.avgChurm = avgChurm;
+    public void setMaxChurn(float maxChurn) {
+        this.maxChurn = maxChurn;
     }
 
+    public float getAvgChurn() {
+        return avgChurn;
+    }
+    public void setAvgChurn(float avgChurn) {
+        this.avgChurn = avgChurn;
+    }
+
+    public int getTotalChurn() {
+        return totalChurn;
+    }
+    public void setTotalChurn(int totalChurn) {
+        this.totalChurn = totalChurn;
+    }
+
+    public int getnAuthor() {
+        return nAuthor;
+    }
+    public void setnAuthor(int nAuthor) {
+        this.nAuthor = nAuthor;
+    }
+
+    public float getM1() {
+        return m1;
+    }
+    public void setM1(float m1) {
+        this.m1 = m1;
+    }
+
+    public float getM2() {
+        return m2;
+    }
+    public void setM2(float m2) {
+        this.m2 = m2;
+    }
+
+    public boolean isBuggy() {
+        return buggy;
+    }
+    public void setBuggy(boolean buggy) {
+        this.buggy = buggy;
+    }
 }

@@ -1,6 +1,6 @@
 package it.uniroma2.ISW2.Pepe.Federico;
 
-import it.uniroma2.ISW2.Pepe.Federico.metrics.ChurmMetrics;
+import it.uniroma2.ISW2.Pepe.Federico.metrics.ChurnMetrics;
 import it.uniroma2.ISW2.Pepe.Federico.metrics.MetricsCollector;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -21,14 +21,14 @@ public class AnalyzerVersion {
     public Map<String, MetricsCollector> analyzeVersion(String absolutePath, ProjectVersion release, String commitId, String root) {
         System.out.println("    >> Analisi della Release: " + release.versionName() + " [Commit: " + commitId + "]");
 
-        // 1. Calcolo della Churm (Delta tra commit attuale e quello della release precedente)
+        // 1. Calcolo della Churn (Delta tra commit attuale e quello della release precedente)
         // Se lastReleaseCommit è null, la mappa sarà vuota (comportamento corretto per R1)
-        Map<String, ChurmMetrics> deltaChurmMap = analyzerChurmMetrics.computeChurn(commitId, lastReleaseCommit);
+        Map<String, ChurnMetrics> deltaChurmMap = analyzerChurmMetrics.computeChurn(commitId, lastReleaseCommit);
 
         if (lastReleaseCommit == null) {
-            System.out.println("    >> Release 1 individuata: Metriche Churm settate a zero");
+            System.out.println("    >> Release 1 individuata: Metriche Churn settate a zero");
         } else {
-            System.out.println("    >> Churm calcolata rispetto al commit: " + lastReleaseCommit);
+            System.out.println("    >> Churn calcolata rispetto al commit: " + lastReleaseCommit);
         }
 
         // 2. Esecuzione della PMD Analysis (Smells)
@@ -38,18 +38,25 @@ public class AnalyzerVersion {
         Map<String, MetricsCollector> releaseMetricsMap = new LinkedHashMap<>();
         analyzerStaticMetrics.computeMetricsBatch(absolutePath, commitId, release, root, releaseMetricsMap);
 
+        //4. Computazione delle metriche relative
+        analyzerChurmMetrics.computeRelativeChurnMetrics(deltaChurmMap, releaseMetricsMap);
+
         // 4. MERGE: Arricchimento del "Blocco Singolo" con Smell e Churm
         releaseMetricsMap.forEach((path, mc) -> {
             mc.setnSmells(smellsMap.getOrDefault(path, 0));
 
             // Inseriamo le metriche di Churm (se il file non è cambiato, i valori restano quelli di default a 0)
-            ChurmMetrics cm = deltaChurmMap.getOrDefault(path, null);
+            ChurnMetrics cm = deltaChurmMap.getOrDefault(path, null);
             if (cm != null) {
                 mc.setnRevisions(cm.getnRevisions());
                 mc.setLocAdded(cm.getLocAdded());
                 mc.setLocDeleted(cm.getLocDeleted());
-                mc.setMaxChurm(cm.getMaxChurm());
-                mc.setAvgChurm(cm.getAvgChurm());
+                mc.setnAuthor(cm.getnAuthor());
+                mc.setTotalChurn(cm.getTotalChurn());
+                mc.setMaxChurn(cm.getMaxChurn());
+                mc.setAvgChurn(cm.getAvgChurn());
+                mc.setM1(cm.getM1());
+                mc.setM2(cm.getM2());
             }
         });
 
