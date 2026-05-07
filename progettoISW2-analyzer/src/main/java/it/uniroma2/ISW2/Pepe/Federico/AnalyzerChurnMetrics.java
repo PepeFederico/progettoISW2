@@ -14,10 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class AnalyzerChurmMetrics {
+public class AnalyzerChurnMetrics {
     private final GitHandler gitHandler;
 
-    public AnalyzerChurmMetrics(GitHandler gitHandler) {
+    public AnalyzerChurnMetrics(GitHandler gitHandler) {
         this.gitHandler = gitHandler;
     }
 

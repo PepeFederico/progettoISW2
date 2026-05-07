@@ -2,6 +2,8 @@ package it.uniroma2.ISW2.Pepe.Federico;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -9,10 +11,14 @@ import org.eclipse.jgit.revwalk.RevObject;
 import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.TagOpt;
+import org.eclipse.jgit.util.io.DisabledOutputStream;
+
 import java.io.File;
 import java.io.IOException;
 import java.time.ZoneOffset;
-import java.util.Optional;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
 
 public class GitHandler implements AutoCloseable {
@@ -33,6 +39,63 @@ public class GitHandler implements AutoCloseable {
             this.git = Git.open(localDir);
             log("Repository in locale aperto correttamente!");
         }
+    }
+
+    public Map<String, List<String>> buildTicketToFileMap() throws IOException, GitAPIException {
+        Map<String, List<String>> ticketToFiles = new HashMap<>();
+        Repository repository = git.getRepository();
+
+        //  Regex per trovare il pattern STORM-seguito da numeri
+        Pattern ticketPattern = Pattern.compile("STORM-\\d+", Pattern.CASE_INSENSITIVE);
+
+        //  1. Recuperiamo tutti i commit
+        Iterable<RevCommit> commits = git.log().all().call();
+        System.out.println("Inizio scansione cronologica Git per mappare tutti i ticket");
+
+        try(DiffFormatter df = new DiffFormatter(DisabledOutputStream.INSTANCE); RevWalk rw = new RevWalk(repository)){
+            df.setRepository(repository);
+            df.setDetectRenames(true);
+
+            for (RevCommit commit : commits){
+                String message = commit.getFullMessage();
+                Matcher matcher = ticketPattern.matcher(message);
+
+                // Troviamo tutti i ticket citati nel messaggio
+                List<String> ticketsInCommit = new ArrayList<>();
+                while (matcher.find()) {
+                    ticketsInCommit.add(matcher.group().toUpperCase());
+                }
+
+                if (ticketsInCommit.isEmpty()) continue;
+
+                // 2. Troviamo i file modificati in questo commit
+                List<String> filesInCommit = new ArrayList<>();
+                RevCommit parent = (commit.getParentCount() > 0) ? rw.parseCommit(commit.getParent(0).getId()) : null;
+                List<DiffEntry> diffs = df.scan(parent != null ? parent.getTree() : null, commit.getTree());
+
+                for (DiffEntry entry : diffs) {
+                    String path = entry.getNewPath();
+                    // Filtro: solo .java e niente test
+                    if (path.endsWith(".java") && !path.contains("/test/")) {
+                        filesInCommit.add(path);
+                    }
+                }
+
+                // 3. Associamo i file a ogni ticket trovato
+                for (String ticketId : ticketsInCommit) {
+                    ticketToFiles.computeIfAbsent(ticketId, k -> new ArrayList<>()).addAll(filesInCommit);
+                }
+            }
+        }
+        // Rimuoviamo eventuali duplicati di file per lo stesso ticket
+        ticketToFiles.forEach((id, files) -> {
+            List<String> distinctFiles = files.stream().distinct().toList();
+            ticketToFiles.put(id, new ArrayList<>(distinctFiles));
+        });
+        log("Mappa completata! Ticket " +
+                "trovati con " +
+                "modifiche al codice: " + ticketToFiles.size());
+        return ticketToFiles;
     }
 
     public String checkoutToRelease(ProjectVersion version) throws IOException, GitAPIException {

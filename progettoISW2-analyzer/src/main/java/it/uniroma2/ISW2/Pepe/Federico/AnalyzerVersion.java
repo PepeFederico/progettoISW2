@@ -8,12 +8,12 @@ import java.util.Map;
 public class AnalyzerVersion {
 
     private String lastReleaseCommit = null;
-    private final AnalyzerChurmMetrics analyzerChurmMetrics;
+    private final AnalyzerChurnMetrics analyzerChurnMetrics;
     private final AnalyzerStaticMetrics analyzerStaticMetrics;
     private final SmellAnalyzerPMD smellAnalyzer;
 
     public AnalyzerVersion(GitHandler gitHandler) {
-        this.analyzerChurmMetrics   = new AnalyzerChurmMetrics(gitHandler);
+        this.analyzerChurnMetrics = new AnalyzerChurnMetrics(gitHandler);
         this.analyzerStaticMetrics  = new AnalyzerStaticMetrics();
         this.smellAnalyzer          = new SmellAnalyzerPMD();
     }
@@ -23,7 +23,7 @@ public class AnalyzerVersion {
 
         // 1. Calcolo della Churn (Delta tra commit attuale e quello della release precedente)
         // Se lastReleaseCommit è null, la mappa sarà vuota (comportamento corretto per R1)
-        Map<String, ChurnMetrics> deltaChurmMap = analyzerChurmMetrics.computeChurn(commitId, lastReleaseCommit);
+        Map<String, ChurnMetrics> deltaChurmMap = analyzerChurnMetrics.computeChurn(commitId, lastReleaseCommit);
 
         if (lastReleaseCommit == null) {
             System.out.println("    >> Release 1 individuata: Metriche Churn settate a zero");
@@ -39,7 +39,7 @@ public class AnalyzerVersion {
         analyzerStaticMetrics.computeMetricsBatch(absolutePath, commitId, release, root, releaseMetricsMap);
 
         //4. Computazione delle metriche relative
-        analyzerChurmMetrics.computeRelativeChurnMetrics(deltaChurmMap, releaseMetricsMap);
+        analyzerChurnMetrics.computeRelativeChurnMetrics(deltaChurmMap, releaseMetricsMap);
 
         // 4. MERGE: Arricchimento del "Blocco Singolo" con Smell e Churm
         releaseMetricsMap.forEach((path, mc) -> {

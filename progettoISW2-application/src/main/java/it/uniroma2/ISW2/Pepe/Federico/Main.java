@@ -1,7 +1,9 @@
 package it.uniroma2.ISW2.Pepe.Federico;
 
+import it.uniroma2.ISW2.Pepe.Federico.labeling.LabelingDataset;
 import it.uniroma2.ISW2.Pepe.Federico.metrics.DatasetUtils;
 import it.uniroma2.ISW2.Pepe.Federico.metrics.MetricsCollector;
+import it.uniroma2.ISW2.Pepe.Federico.proportion.ProportionCalculator;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,6 +34,7 @@ public class Main {
         String executionMode    = props.getProperty("executionMode");
 
         JiraReleaseRetriever retriever      = new JiraReleaseRetriever();
+        DatasetUtils datasetUtils           = new DatasetUtils();
         AnalyzerVersion analyzer;
 
         List<MetricsCollector> dataset = null;
@@ -40,6 +43,7 @@ public class Main {
             // 2    -->  Recupero e filtraggio release
             LOGGER.info("Inizio recupero informazioni sulle release per il progetto: " + projectName);
             List<ProjectVersion> allVersions = retriever.getReleaseInfo(projectName);
+            datasetUtils.generateVersionsDataset(projectName,allVersions);
 
             if (allVersions.isEmpty()) {
                 LOGGER.warning("Nessuna versione trovata per il progetto " + projectName);
@@ -66,7 +70,6 @@ public class Main {
                 // Esportazione Dataset
                 if (!finalDataset.isEmpty()) {
                     LOGGER.info("Inizio esportazione dataaset sul file CSV...");
-                    DatasetUtils datasetUtils = new DatasetUtils();
                     datasetUtils.generateDataset(projectName, finalDataset);
                 } else {
                     LOGGER.warning("Nessun dato raccolto: il file CSV non verrà generato.");
@@ -75,15 +78,44 @@ public class Main {
             LOGGER.info("Processo completato con successo per tutte le release filtrate.");
         } else {
             String path = props.getProperty("datasetPath");
-            DatasetUtils datasetUtils = new DatasetUtils();
             dataset = datasetUtils.loadDatasetFromFile(path);
         }
 
         if (executionMode.equalsIgnoreCase("LABEL") || executionMode.equalsIgnoreCase("FULL")){
             LOGGER.info("Dataset caricato in memoria. Inizio fase di Labeling del Dataset");
+
             //Inizializzazione della fase di Labeling del Dataset
-            applyLabeling(dataset, projectName);
+            LOGGER.info("Inizio procedura di recupero di tutti i Ticket da Jira...");
+            List<JiraTicket> jiraTickets = retrieveTicketFromJira(projectName);
+            LOGGER.info("Ticket recuperati con successo ");
+
+            String pathAllVersionsTable = props.getProperty("versionsPath");
+            List<VersionField> allVersions = datasetUtils.loadDatasetVersionsFromFile(pathAllVersionsTable);
+            double meanP = computeProportion(allVersions, jiraTickets);
+
+            try(GitHandler gitHandler = new GitHandler(localPath, githubUrl)){
+                computeLabeling(meanP, dataset, jiraTickets, allVersions, gitHandler);
+            }
+            LOGGER.info("Conclusa fase di Labeling del Dataset!");
         }
+    }
+
+    private void computeLabeling(Double meanP, List<MetricsCollector> dataset, List<JiraTicket> jiraTickets, List<VersionField> allVersions, GitHandler gitHandler) throws GitAPIException, IOException {
+        LabelingDataset labelingDataset = new LabelingDataset();
+
+        LOGGER.info("Inizio procedura di Labeling del dataset...");
+        labelingDataset.labelTickets(meanP, dataset, jiraTickets, allVersions, gitHandler);
+    }
+
+    private double computeProportion(List<VersionField> allVersions, List<JiraTicket> jiraTickets) {
+        ProportionCalculator proportionCalculator = new ProportionCalculator(allVersions, jiraTickets);
+        proportionCalculator.runCalculation();
+        double meanP = proportionCalculator.getMean();
+
+        LOGGER.info("Intervallo di Confidenza per P (alpha = 0.05) : " + "[ " + meanP + " +/- " + proportionCalculator.getConfidenceIntervalWidth() + " ]");
+        LOGGER.info("Calcolo della Proportion Total calcolata con successo!");
+
+        return meanP;
     }
 
     private Map<String, MetricsCollector> processRelease(ProjectVersion release, GitHandler git, AnalyzerVersion analyzer, String path, String root) throws GitAPIException, IOException {
@@ -116,9 +148,9 @@ public class Main {
         return props;
     }
 
-    private void applyLabeling(List<MetricsCollector> dataset, String projectName){
+    private List<JiraTicket> retrieveTicketFromJira(String projectName) throws IOException {
         JiraTicketRetriever jiraTicketRetriever = new JiraTicketRetriever();
 
-
+        return jiraTicketRetriever.retrieveTicketFromJira(projectName);
     }
 }
