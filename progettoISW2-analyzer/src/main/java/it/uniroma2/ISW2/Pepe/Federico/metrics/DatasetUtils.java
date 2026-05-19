@@ -228,6 +228,65 @@ public class DatasetUtils {
         return dataset;
     }
 
+    public List<MetricsCollector> loadDatasetFromFileFeature(String path){
+        List<MetricsCollector> dataset = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+            String line;
+            br.readLine(); // Salta l'intestazione (HEADER)
+
+            while ((line = br.readLine()) != null) {
+                String[] v = line.split(",");
+
+                // Mappatura seguendo l'ordine esatto del tuo DatasetExporter
+                MetricsCollector mc = new MetricsCollector();
+
+                // 1-4: Identificativi
+                mc.setNumRelease(Integer.parseInt(v[0]));
+                mc.setVersionName(v[1]);
+                mc.setClassPath(v[2]);
+
+                // 5-9: Metriche classiche
+                mc.setWmc(Integer.parseInt(v[3]));
+                mc.setCbo(Integer.parseInt(v[4]));
+                mc.setDit(Integer.parseInt(v[5]));
+                mc.setRfc(Integer.parseInt(v[6]));
+                mc.setLcom(Integer.parseInt(v[7]));
+
+                // 10-13: Dimensioni
+                mc.setLoc(Integer.parseInt(v[8]));
+                mc.setnOfMethod(Integer.parseInt(v[9]));
+                mc.setnOfField(Integer.parseInt(v[10]));
+                mc.setNpm(Integer.parseInt(v[11]));
+
+                // 14-16: Metriche decimali (DAM, MFA, AMC)
+                mc.setDam(Float.parseFloat(v[12]));
+                mc.setMfa(Float.parseFloat(v[13]));
+                mc.setAmc(Float.parseFloat(v[14]));
+
+                // 17-25: Revisioni e Churn
+                mc.setnRevisions(Integer.parseInt(v[15]));
+                mc.setLocAdded(Integer.parseInt(v[16]));
+                mc.setLocDeleted(Integer.parseInt(v[17]));
+                mc.setnAuthor(Integer.parseInt(v[18]));
+                mc.setTotalChurn(Integer.parseInt(v[19]));
+                mc.setMaxChurn(Float.parseFloat(v[20]));
+                mc.setAvgChurn(Float.parseFloat(v[21]));
+                mc.setM1(Float.parseFloat(v[22]));
+                mc.setM2(Float.parseFloat(v[23]));
+
+                // 26-27: Smells e Buggy
+                mc.setnSmells(Integer.parseInt(v[24]));
+                mc.setBuggy(Boolean.parseBoolean(v[25]));
+
+                dataset.add(mc);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return dataset;
+    }
+
     public List<VersionField> loadDatasetVersionsFromFile(String path){
         List<VersionField> allVersions = new ArrayList<>();
 

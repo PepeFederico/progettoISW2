@@ -9,7 +9,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>progettoISW2-application</artifactId>
+    <artifactId>progettoISW2-weka</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -19,33 +19,21 @@
 
     <dependencies>
         <dependency>
-            <groupId>it.uniroma2.ISW2.Pepe.Federico</groupId>
-            <artifactId>progettoISW2-core</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <groupId>nz.ac.waikato.cms.weka</groupId>
+            <artifactId>SMOTE</artifactId>
+            <version>1.0.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>nz.ac.waikato.cms.weka</groupId>
+            <artifactId>weka-stable</artifactId>
+            <version>3.8.6</version>
         </dependency>
 
         <dependency>
             <groupId>it.uniroma2.ISW2.Pepe.Federico</groupId>
-            <artifactId>progettoISW2-issue-miner</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>it.uniroma2.ISW2.Pepe.Federico</groupId>
-            <artifactId>progettoISW2-vcs-miner</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>it.uniroma2.ISW2.Pepe.Federico</groupId>
             <artifactId>progettoISW2-analyzer</artifactId>
             <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>it.uniroma2.ISW2.Pepe.Federico</groupId>
-            <artifactId>progettoISW2-weka</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 

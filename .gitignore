@@ -22,6 +22,8 @@ out/
 # Cartella repo-locale
 repo-storm/
 
+feature_selections/
+
 # Sistema
 .DS_Store
 Thumbs.db

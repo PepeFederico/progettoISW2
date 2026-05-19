@@ -7,6 +7,9 @@ import it.uniroma2.ISW2.Pepe.Federico.proportion.ProportionCalculator;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -97,6 +100,47 @@ public class Main {
                 computeLabeling(meanP, dataset, jiraTickets, allVersions, gitHandler);
             }
             LOGGER.info("Conclusa fase di Labeling del Dataset!");
+        }
+
+        if (executionMode.equalsIgnoreCase("FEATURE_SELECTIONS") ||
+                executionMode.equalsIgnoreCase("LABEL") ||
+                executionMode.equalsIgnoreCase("FULL")) {
+
+            LOGGER.info("Milestone 2 --> Sezione Feature Selections. Preparazione Dataset incrementali.");
+
+            WekaDataProcessorController wekaDataProcessorController = new WekaDataProcessorController();
+
+            try {
+                Path pathDir = Paths.get("feature_selections");
+                if (Files.notExists(pathDir)) {
+                    Files.createDirectories(pathDir);
+                }
+
+                List<String> cases = Arrays.asList(
+                        "dataset_base",
+                        "dataset_ig",
+                        "dataset_ig_spearman",
+                        "dataset_full"
+                );
+
+                String path = props.getProperty("finalDataset");
+                dataset = datasetUtils.loadDatasetFromFileFeature(path);
+
+                //      Ciclo per scorrere tutti i casi
+                for (String caseName : cases) {
+                    Path subDir = pathDir.resolve(caseName);
+
+                    if (Files.notExists(subDir)) {
+                        Files.createDirectories(subDir);
+                        LOGGER.info("Creazione cartella per caso: " + caseName);
+                    }
+
+                    wekaDataProcessorController.processDataset(caseName, subDir, dataset, caseName);
+                }
+
+            } catch (IOException e) {
+                LOGGER.warning("Errore durante la creazione delle directory per la Feature Selection: " +  e.getMessage());
+            }
         }
     }
 

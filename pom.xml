@@ -21,6 +21,7 @@
         <module>progettoISW2-analyzer</module>
         <module>progettoISW2-issue-miner</module>
         <module>progettoISW2-application</module>
+        <module>progettoISW2-weka</module>
     </modules>
 
     <dependencyManagement>
